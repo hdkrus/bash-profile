@@ -39,20 +39,34 @@ function linux-id-based() {
   fi
 }
 
-function update-os() {
-  local based=$(linux-id-based)
-  if [[ "$based" = *"debian"* ]]; then
-    update-debian-based
-  elif [[ "$based" = *"fedora"* ]]; then
-    update-fedora-based
-  elif [[ "$based" = *"arch"* ]]; then
-    update-arch-based
-  elif [[ "$based" = *"opensuse"* ]]; then
-    update-opensuse
-  elif [[ "$based" = *"gentoo"* ]]; then
-    update-gentoo-based
+function is-atomic-ostree() {
+  local ostree_version=$(linux-release | \grep ^OSTREE_VERSION=)
+
+  if [ -n "$ostree_version" ]; then
+    echo "yes"
   else
-    error "Not supported update for distro based in $based"
+    echo "no"
+  fi
+}
+
+function update-os() {
+  if [[ "$(is-atomic-ostree)" == "yes" ]]; then
+    update-ostree-based
+  else
+    local based=$(linux-id-based)
+    if [[ "$based" = *"debian"* ]]; then
+        update-debian-based
+    elif [[ "$based" = *"fedora"* ]]; then
+        update-fedora-based
+    elif [[ "$based" = *"arch"* ]]; then
+        update-arch-based
+    elif [[ "$based" = *"opensuse"* ]]; then
+        update-opensuse
+    elif [[ "$based" = *"gentoo"* ]]; then
+        update-gentoo-based
+    else
+        error "Not supported update for distro based in $based"
+    fi
   fi
 }
 
@@ -82,4 +96,10 @@ function update-opensuse() {
 function update-gentoo-based() {
   echo-color yellow "Updating Gentoo based linux..."
   sudo emerge --update --deep --newuse --changed-deps @world
+}
+
+function update-ostree-based() {
+    echo-color yellow "Updating OSTree Atomic based linux..."
+    rpm-ostree update --check
+    rpm-ostree upgrade
 }
